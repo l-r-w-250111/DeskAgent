@@ -51,6 +51,9 @@ First, analyze the user's prompt to determine the type of operation.
         -   **Main Function:** All playwright logic **MUST** be wrapped in an `async def main():` function.
         -   **Execution:** The script **MUST** end with `asyncio.run(main())`. Do **NOT** use `if __name__ == "__main__":`.
         -   **API Calls:** All Playwright API calls **MUST** be preceded by `await`.
+        -   **Locators:** Instead of brittle selectors like `textarea[name=\"q\"]`, you **MUST** use robust, role-based locators. For a search box, prefer `page.get_by_role('searchbox')`, `page.get_by_label('Search')`, or `page.get_by_placeholder('Search')`. This is more reliable across different websites (e.g., Google, Yahoo).
+        -   **STRICT RULE FOR SEARCHING:** To perform a search, you **MUST** first fill the search input field, then **wait for 1 second**, and then call `await page.locator(...).press('Enter')` on that **SAME** locator. The delay helps avoid reCAPTCHA. **DO NOT** attempt to find and click a separate "Search" button.
+        -   **CRITICAL: Keep Browser Open:** After all actions, you **MUST** end the script with `await asyncio.Future()` to prevent the browser from closing automatically.
         -   **Example Structure:**
             ```python
             import asyncio
@@ -64,21 +67,17 @@ First, analyze the user's prompt to determine the type of operation.
                     browser = await p.chromium.launch(headless=False)
                     page = await browser.new_page()
                     await page.goto("https://www.google.com")
-                    # ... more actions using await ...
+                    # Use a robust locator for the search box
+                    search_box = page.get_by_role("searchbox", name="q")
+                    await search_box.fill("Playwright")
+                    await page.wait_for_timeout(1000) # Wait 1 second
+                    await search_box.press("Enter")
                     await page.wait_for_load_state('networkidle')
-                    # CRITICAL: Pause at the end to keep the browser open.
-                    await page.pause()
+                    # CRITICAL: Keep the browser open indefinitely.
+                    await asyncio.Future()
 
             asyncio.run(main())
             ```
-        -   **Locators:** Use robust locators like `page.locator('textarea[name=\"q\"]')`.
-        -   **STRICT RULE FOR SEARCHING:** To perform a search, you **MUST** first fill the search input field, then **wait for 1 second**, and then call `await page.locator(...).press('Enter')` on that **SAME** locator. The delay helps avoid reCAPTCHA. **DO NOT** attempt to find and click a separate "Search" button. This is unreliable.
-            - Example:
-                ```python
-                await page.get_by_title("Search").fill("Playwright")
-                await page.wait_for_timeout(1000) # Wait 1 second
-                await page.get_by_title("Search").press("Enter")
-                ```
 
 2.  **Desktop/Application Operation (Non-Browser):**
     -   If the prompt refers to a desktop application like "Notepad", "Calculator", or general GUI interactions, you **MUST** use `pyautogui`, `pygetwindow`, and `ocr_helper`.

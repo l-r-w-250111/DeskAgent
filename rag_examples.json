@@ -1,18 +1,18 @@
 [
   {
     "original_prompt": "メモ帳を起動して、「こんにちは」と入力する",
-    "code": "import subprocess\nimport pyautogui\nimport pyperclip\nimport time\n\nsubprocess.Popen(['notepad.exe'])\ntime.sleep(2)\npyperclip.copy(\"こんにちは\")\npyautogui.hotkey('ctrl', 'v')\n"
+    "code": "import subprocess\nimport pyautogui\nimport pyperclip\nimport time\nimport pygetwindow as gw\n\n# Try to find an existing Notepad window\nnotepad_windows = gw.getWindowsWithTitle('Notepad')\nif notepad_windows:\n    # Activate the first found window\n    notepad_windows[0].activate()\n    time.sleep(1)\nelse:\n    # Launch Notepad if no window is found\n    subprocess.Popen(['notepad.exe'])\n    time.sleep(2)\n\npyperclip.copy(\"こんにちは\")\npyautogui.hotkey('ctrl', 'v')\n"
   },
   {
     "original_prompt": "電卓を起動する",
-    "code": "import subprocess\n\nsubprocess.Popen(['calc.exe'])\n"
+    "code": "import subprocess\nimport time\nimport pygetwindow as gw\n\n# Try to find an existing Calculator window\ncalc_windows = gw.getWindowsWithTitle('Calculator')\nif calc_windows:\n    # Activate the first found window\n    calc_windows[0].activate()\n    time.sleep(1)\nelse:\n    # Launch Calculator if no window is found\n    subprocess.Popen(['calc.exe'])\n    time.sleep(2)\n"
   },
   {
     "original_prompt": "ブラウザを開いて、'今日の天気'を検索して",
-    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=False)\n        page = await browser.new_page()\n        await page.goto('https://www.google.com')\n        search_box = page.locator('textarea[name=\\\"q\\\"]')\n        await search_box.fill('今日の天気')\n        await search_box.press('Enter')\n        await page.wait_for_load_state('networkidle')\n        # Pause to keep the browser open\n        await page.pause()\n\nasyncio.run(main())\n"
+    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=False)\n        page = await browser.new_page()\n        await page.goto('https://www.google.com')\n        search_box = page.get_by_role(\"searchbox\", name=\"q\")\n        await search_box.fill('今日の天気')\n        await page.wait_for_timeout(1000) # Wait to avoid reCAPTCHA\n        await search_box.press('Enter')\n        await page.wait_for_load_state('networkidle')\n        # Keep the browser open indefinitely\n        await asyncio.Future()\n\nasyncio.run(main())\n"
   },
   {
-    "original_prompt": "すでに開いているブラウザに接続して、'playwright'について検索して",
-    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.connect_over_cdp(\"http://localhost:9222\")\n        page = browser.contexts[0].pages[0]\n        await page.goto('https://www.google.com')\n        search_box = page.locator('textarea[name=\\\"q\\\"]')\n        await search_box.fill('playwright')\n        await search_box.press('Enter')\n        await page.wait_for_load_state('networkidle')\n        # Pause to keep the browser open\n        await page.pause()\n\nasyncio.run(main())\n"
+    "original_prompt": "Yahoo! JAPANで「最新ニュース」を検索して",
+    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=False)\n        page = await browser.new_page()\n        await page.goto('https://www.yahoo.co.jp')\n        # Use a robust, role-based selector for Yahoo's search box\n        search_box = page.locator('[role=\"search\"] input[type=\"search\"]')\n        await search_box.fill('最新ニュース')\n        await page.wait_for_timeout(1000) # Wait to avoid reCAPTCHA\n        await search_box.press('Enter')\n        await page.wait_for_load_state('networkidle')\n        # Keep the browser open indefinitely\n        await asyncio.Future()\n\nasyncio.run(main())\n"
   }
 ]
