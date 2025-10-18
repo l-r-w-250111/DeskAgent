@@ -1,0 +1,18 @@
+[
+  {
+    "original_prompt": "メモ帳を起動して、「こんにちは」と入力する",
+    "code": "import subprocess\nimport pyautogui\nimport pyperclip\nimport time\n\nsubprocess.Popen(['notepad.exe'])\ntime.sleep(2)\npyperclip.copy(\"こんにちは\")\npyautogui.hotkey('ctrl', 'v')\n"
+  },
+  {
+    "original_prompt": "電卓を起動する",
+    "code": "import subprocess\n\nsubprocess.Popen(['calc.exe'])\n"
+  },
+  {
+    "original_prompt": "ブラウザを開いて、'今日の天気'を検索して",
+    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=False)\n        page = await browser.new_page()\n        await page.goto('https://www.google.com')\n        search_box = page.locator('textarea[name=\\\"q\\\"]')\n        await search_box.fill('今日の天気')\n        await search_box.press('Enter')\n        await page.wait_for_load_state('networkidle')\n        # Pause to keep the browser open\n        await page.pause()\n\nasyncio.run(main())\n"
+  },
+  {
+    "original_prompt": "すでに開いているブラウザに接続して、'playwright'について検索して",
+    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.connect_over_cdp(\"http://localhost:9222\")\n        page = browser.contexts[0].pages[0]\n        await page.goto('https://www.google.com')\n        search_box = page.locator('textarea[name=\\\"q\\\"]')\n        await search_box.fill('playwright')\n        await search_box.press('Enter')\n        await page.wait_for_load_state('networkidle')\n        # Pause to keep the browser open\n        await page.pause()\n\nasyncio.run(main())\n"
+  }
+]

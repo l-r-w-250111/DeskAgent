@@ -1,0 +1,7 @@
+{
+    "ollama_url": "http://localhost:11434",
+    "operation_model": "gemma3:12b",
+    "evaluation_model": "gemma3:12b",
+    "embedding_model": "embeddinggemma",
+    "max_retries": 3
+}

@@ -1,0 +1,13 @@
+streamlit
+llama-index
+llama-index-core
+llama-index-embeddings-ollama
+llama-index-llms-ollama
+pyautogui
+Pillow
+ollama
+pygetwindow
+pyperclip
+easyocr
+playwright
+nest_asyncio
