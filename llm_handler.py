@@ -72,7 +72,13 @@ First, analyze the user's prompt to determine the type of operation.
             asyncio.run(main())
             ```
         -   **Locators:** Use robust locators like `page.locator('textarea[name=\"q\"]')`.
-        -   **STRICT RULE FOR SEARCHING:** To perform a search, you **MUST** first fill the search input field, and then call `await page.locator(...).press('Enter')` on that **SAME** locator. **DO NOT** attempt to find and click a separate "Search" button. This is unreliable.
+        -   **STRICT RULE FOR SEARCHING:** To perform a search, you **MUST** first fill the search input field, then **wait for 1 second**, and then call `await page.locator(...).press('Enter')` on that **SAME** locator. The delay helps avoid reCAPTCHA. **DO NOT** attempt to find and click a separate "Search" button. This is unreliable.
+            - Example:
+                ```python
+                await page.get_by_title("Search").fill("Playwright")
+                await page.wait_for_timeout(1000) # Wait 1 second
+                await page.get_by_title("Search").press("Enter")
+                ```
 
 2.  **Desktop/Application Operation (Non-Browser):**
     -   If the prompt refers to a desktop application like "Notepad", "Calculator", or general GUI interactions, you **MUST** use `pyautogui`, `pygetwindow`, and `ocr_helper`.
