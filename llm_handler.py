@@ -77,11 +77,15 @@ First, analyze the user's prompt to determine the type of operation.
 2.  **Desktop/Application Operation (Non-Browser):**
     -   If the prompt refers to a desktop application like "Notepad", "Calculator", or general GUI interactions, you **MUST** use `pyautogui`, `pygetwindow`, and `ocr_helper`.
     -   **PyAutoGUI Workflow:**
-        1.  Launch the app with `subprocess.Popen()`.
-        2.  Wait with `time.sleep()`.
-        3.  Find and activate the window with `pygetwindow`.
-        4.  Use `ocr_helper.find_text_coordinates()` to find buttons or text fields.
-        5.  Use `pyautogui` to click and type.
+        -   **CRITICAL FIRST STEP: Window Activation**
+            1.  You **MUST** first identify the target application from the user's prompt (e.g., 'Notepad', 'Calculator').
+            2.  You **MUST** use `pygetwindow.getWindowsWithTitle('AppName')` to get a list of matching windows.
+            3.  If the list is not empty, you **MUST** activate the first window using `window[0].activate()`. This ensures you are targeting the correct, existing window. **DO NOT** launch a new instance if the window already exists.
+            4.  **ONLY IF** no window is found should you launch the application using `subprocess.Popen()`.
+            5.  After launching, you **MUST** use `time.sleep()` to wait for the application to open before attempting to find and activate it.
+        -   **Subsequent Actions:**
+            -   After the window is activated, use `ocr_helper.find_text_coordinates()` to find buttons or text fields.
+            -   Use `pyautogui` to click and type.
 
 **CRITICAL RULE FOR TYPING TEXT (for both tools):**
 -   You MUST extract the literal text from the user's command and embed it directly in the function call.
