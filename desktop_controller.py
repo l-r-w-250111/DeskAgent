@@ -86,15 +86,16 @@ class DesktopController:
             # Execute the script in a new, non-blocking process using Popen
             # This allows the main app to continue without waiting for the script to finish,
             # which is essential for leaving browser windows open.
-            process = subprocess.Popen(
-                [sys.executable, temp_script_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                encoding='utf-8',
-                errors='replace',
-                env=env
-            )
+            # Redirect stdout and stderr to log files to capture output from the detached process
+            with open("script_output.log", "w", encoding='utf-8') as stdout_log, \
+                 open("script_error.log", "w", encoding='utf-8') as stderr_log:
+                process = subprocess.Popen(
+                    [sys.executable, temp_script_path],
+                    stdout=stdout_log,
+                    stderr=stderr_log,
+                    env=env,
+                    start_new_session=True
+                )
 
             # We don't wait for the process to complete here.
             # The script will run independently as a detached process.

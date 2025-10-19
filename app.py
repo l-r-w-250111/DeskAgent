@@ -115,6 +115,9 @@ def run_automation_flow(command: str):
             visualized_img = draw_ocr_results(before_screenshot_img.copy(), ocr_results)
             st.image(visualized_img, caption=f"OCR Visualization (Attempt {attempt+1})")
 
+            # For RAG, we only need the text content
+            ocr_texts_for_rag = [{'text': text} for _, text, _ in ocr_results]
+
             # 4. RAG Search
             append_log("Searching for similar successful examples (RAG)...")
             rag_examples = rag_handler.retrieve_similar_examples(abstract_prompt)
@@ -141,12 +144,23 @@ def run_automation_flow(command: str):
             append_log("Executing generated code...")
             try:
                 controller.execute_code(generated_code)
-                # Add the temp script to the cleanup list
-                st.session_state.screenshots_to_cleanup.append("temp_automation_script.py")
-                append_log("[SUCCESS] Code execution command sent.")
-                time.sleep(2)  # Wait for UI to settle
+                st.session_state.screenshots_to_cleanup.extend(["temp_automation_script.py", "script_error.log", "script_output.log"])
+                append_log("[SUCCESS] Code execution command sent. Waiting for results...")
+                time.sleep(3)  # Wait for the script to execute and write logs
+
+                # Crash Detection
+                if os.path.exists("script_error.log"):
+                    with open("script_error.log", "r", encoding='utf-8') as f:
+                        error_output = f.read().strip()
+                    if error_output:
+                        append_log(f"[ERROR] Script crashed. Error:\n{error_output}")
+                        st.code(error_output, language='log')
+                        append_log("Retrying...")
+                        time.sleep(2)
+                        continue # Move to the next attempt
+
             except Exception as e:
-                append_log(f"[ERROR] Code execution failed: {e}. Retrying...")
+                append_log(f"[ERROR] Code execution failed to launch: {e}. Retrying...")
                 time.sleep(2)
                 continue
 
@@ -157,15 +171,67 @@ def run_automation_flow(command: str):
             st.session_state.screenshots_to_cleanup.append(after_screenshot_path)
             st.image(after_screenshot_img, caption=f"Screen After Attempt {attempt+1}")
 
-            append_log("Asking LLM to evaluate the result...")
-            is_success = llm_handler.evaluate_operation(command, final_code, before_screenshot_path, after_screenshot_path)
+            # --- OCR-based evaluation for typing tasks ---
+            if any(keyword in command.lower() for keyword in ["type", "enter", "入力"]):
+                append_log("Performing OCR-based validation for typing task...")
+                # Extract the text to be typed from the generated code
+                # This is a bit brittle, assumes pyperclip.copy("text")
+                try:
+                    import ast
 
-            if is_success:
-                append_log("[SUCCESS] LLM evaluation: SUCCESS.")
-                operation_successful = True
-                break  # Exit retry loop
+                    # Safely parse the code to find the text in pyperclip.copy()
+                    text_to_find = None
+                    tree = ast.parse(final_code)
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.Call) and \
+                           isinstance(node.func, ast.Attribute) and \
+                           node.func.attr == 'copy' and \
+                           isinstance(node.func.value, ast.Name) and \
+                           node.func.value.id == 'pyperclip' and \
+                           node.args and isinstance(node.args[0], ast.Str):
+                            text_to_find = node.args[0].s
+                            break
+                    
+                    if not text_to_find:
+                        raise ValueError("Could not find pyperclip.copy('...') in the generated code.")
+
+                    append_log(f"Searching for text '{text_to_find}' in the 'after' screenshot...")
+                    
+                    # Get OCR results from the 'after' screenshot
+                    _, after_ocr_results = get_all_ocr_results(after_screenshot_path)
+                    
+                    found_text = False
+                    for _, text, _ in after_ocr_results:
+                        if text_to_find in text:
+                            found_text = True
+                            break
+                    
+                    if found_text:
+                        append_log(f"[SUCCESS] OCR validation: Found '{text_to_find}'.")
+                        operation_successful = True
+                        break # Exit retry loop
+                    else:
+                        append_log(f"[ERROR] OCR validation: Did not find '{text_to_find}'. Retrying...")
+
+                except IndexError:
+                    append_log("[WARNING] Could not parse text from code for OCR validation. Falling back to LLM.")
+                    # Fallback to LLM evaluation if parsing fails
+                    is_success = llm_handler.evaluate_operation(command, final_code, before_screenshot_path, after_screenshot_path)
+                    if is_success:
+                        operation_successful = True
+                        break
+
             else:
-                append_log("[ERROR] LLM evaluation: FAILURE. Retrying...")
+                # --- LLM-based evaluation for other tasks ---
+                append_log("Asking LLM to evaluate the result...")
+                is_success = llm_handler.evaluate_operation(command, final_code, before_screenshot_path, after_screenshot_path)
+
+                if is_success:
+                    append_log("[SUCCESS] LLM evaluation: SUCCESS.")
+                    operation_successful = True
+                    break  # Exit retry loop
+                else:
+                    append_log("[ERROR] LLM evaluation: FAILURE. Retrying...")
 
         # 8. Final User Confirmation
         if operation_successful:
@@ -228,7 +294,6 @@ def main_page():
 
                 cleanup_temp_files(st.session_state.get("screenshots_to_cleanup", []))
                 st.session_state.validation_pending = None
-                st.rerun()
 
         with col2:
             if st.button("Report Failure", use_container_width=True):
@@ -236,7 +301,6 @@ def main_page():
                 st.warning("Thank you for the feedback. This operation will be discarded.")
                 cleanup_temp_files(st.session_state.get("screenshots_to_cleanup", []))
                 st.session_state.validation_pending = None
-                st.rerun()
 
     st.code(st.session_state.logs, language="log")
 

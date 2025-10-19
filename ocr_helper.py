@@ -72,20 +72,29 @@ def find_text_coordinates(text_to_find: str) -> Optional[Tuple[int, int]]:
     print(f"OCR: Text '{text_to_find}' not found on the screen.")
     return None
 
-def get_all_ocr_results() -> (Image.Image, List[dict]):
+def get_all_ocr_results(image_path: Optional[str] = None) -> (Image.Image, List[dict]):
     """
-    Captures the screen and gets all OCR results.
+    Captures the screen or loads an image from a path and gets all OCR results.
+
+    Args:
+        image_path (Optional[str]): The path to an image file. If None, a new screenshot is taken.
 
     Returns:
         tuple[Image.Image, List[dict]]: A tuple containing the screenshot as a PIL Image
                                  and a list of all detected text blocks.
     """
-    print("OCR: Capturing screen and getting all text...")
-    screenshot_image = pyautogui.screenshot()
+    if image_path:
+        print(f"OCR: Loading image from {image_path} and getting all text...")
+        screenshot_image = Image.open(image_path)
+    else:
+        print("OCR: Capturing screen and getting all text...")
+        screenshot_image = pyautogui.screenshot()
+
     screenshot_np = np.array(screenshot_image)
     results = reader.readtext(screenshot_np, detail=1, paragraph=False)
     print(f"OCR: Found {len(results)} text block(s).")
-    return screenshot_image, [{'bbox': bbox, 'text': text} for (bbox, text, confidence) in results]
+    # The returned list now only contains the text, not the bbox or confidence
+    return screenshot_image, [(bbox, text, confidence) for (bbox, text, confidence) in results]
 
 
 def draw_ocr_results(screenshot_image: Image.Image, ocr_results: List[dict]) -> Image.Image:
@@ -110,10 +119,7 @@ def draw_ocr_results(screenshot_image: Image.Image, ocr_results: List[dict]) -> 
         print(f"Warning: Font file not found at {FONT_PATH}. Using default font. Japanese characters may not render correctly.")
         font = ImageFont.load_default()
 
-    for result in ocr_results:
-        bbox = result['bbox']
-        text = result['text']
-
+    for (bbox, text, confidence) in ocr_results:
         top_left = tuple(map(int, bbox[0]))
         bottom_right = tuple(map(int, bbox[2]))
 

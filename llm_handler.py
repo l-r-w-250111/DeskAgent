@@ -25,92 +25,57 @@ class LLMHandler:
     def generate_automation_code(self, user_prompt: str, screen_size: tuple[int, int], screenshot_path: str, rag_examples: List[Dict[str, str]] = []) -> str:
         """
         Generates Python code for desktop automation.
-
-        Args:
-            user_prompt (str): The user's instruction.
-            screen_size (tuple[int, int]): A tuple (width, height) of the screen.
-            screenshot_path (str): The path to the current screenshot.
-            rag_examples (List[Dict[str, str]]): A list of successful prompt/code examples from RAG.
-
-        Returns:
-            str: The generated Python code, ready for execution.
         """
         width, height = screen_size
         system_prompt = f"""
-You are an expert Python programmer specializing in desktop automation. Your task is to write a Python script to accomplish the user's goal.
+You are an expert Python programmer creating a script for desktop automation. Your code must be perfect, robust, and follow best practices.
 
-**DECISION FRAMEWORK: Choose the Right Tool**
+**1. Tool Selection**
+First, determine the correct tool for the job based on the user's prompt.
+- For **web browser** tasks (e.g., "Google", "website", "URL"), you **must** use the `playwright` library.
+- For **desktop applications** (e.g., "Notepad", "Calculator"), you **must** use `pyautogui`, `pygetwindow`, and `pyperclip`.
 
-First, analyze the user's prompt to determine the type of operation.
+**2. Desktop Automation Best Practices (`pyautogui`)**
+To ensure your script is reliable, follow this exact workflow:
+1.  **Check for Existing Window:** Before launching an app, always check if it's already open using `pygetwindow.getWindowsWithTitle('AppName')`.
+2.  **Activate or Launch:** If found, activate the window with `.activate()`. If not found, **and only then**, launch it with `subprocess.Popen(['app.exe'])`. After launching, you must wait (`time.sleep()`) and then get and activate the window.
+3.  **Typing Non-ASCII Text:** For any text that is not plain English (e.g., Japanese), you **must** use the clipboard method to avoid character corruption.
+    - **Required:** `import pyperclip` at the top of your script.
+    - **Required:** Use `pyperclip.copy('こんにちは')` followed by `pyautogui.hotkey('ctrl', 'v')`.
+4.  **Literal Values:** Never store literal text in a variable. Embed it directly in the function call (e.g., `pyperclip.copy('some_text')`).
 
-1.  **Browser-based Operation:**
-    -   If the prompt contains keywords like "browser", "website", "URL", "Google", "search for", "go to", or a web address, you **MUST** use the `playwright` **Async API**.
-    -   **Playwright Async Workflow:**
-        -   **CRITICAL ASYNC HANDLING:** To prevent event loop errors, you **MUST** use the `nest_asyncio` library. The script must start with `import nest_asyncio` and `nest_asyncio.apply()`. This allows `asyncio.run()` to work correctly in all environments.
-        -   **CRITICAL IMPORTS:** Your script **MUST** import `asyncio`, `nest_asyncio`, and `async_playwright`.
-        -   **Main Function:** All playwright logic **MUST** be wrapped in an `async def main():` function.
-        -   **Execution:** The script **MUST** end with `asyncio.run(main())`. Do **NOT** use `if __name__ == "__main__":`.
-        -   **API Calls:** All Playwright API calls **MUST** be preceded by `await`.
-        -   **Locators:** Instead of brittle selectors like `textarea[name=\"q\"]`, you **MUST** use robust, role-based locators. For a search box, prefer `page.get_by_role('searchbox')`, `page.get_by_label('Search')`, or `page.get_by_placeholder('Search')`. This is more reliable across different websites (e.g., Google, Yahoo).
-        -   **STRICT RULE FOR SEARCHING:** To perform a search, you **MUST** first fill the search input field, then **wait for 1 second**, and then call `await page.locator(...).press('Enter')` on that **SAME** locator. The delay helps avoid reCAPTCHA. **DO NOT** attempt to find and click a separate "Search" button.
-        -   **CRITICAL: Keep Browser Open:** After all actions, you **MUST** end the script with `await asyncio.Future()` to prevent the browser from closing automatically.
-        -   **Example Structure:**
-            ```python
-            import asyncio
-            import nest_asyncio
-            from playwright.async_api import async_playwright
+**3. Web Automation Best Practices (`playwright`)**
+To create a high-quality Playwright script, you must adhere to these rules:
+1.  **Async Boilerplate:** All scripts **must** begin with the standard `nest_asyncio` setup to prevent event loop conflicts.
+    ```python
+    import asyncio
+    import nest_asyncio
+    from playwright.async_api import async_playwright
 
-            nest_asyncio.apply()
+    nest_asyncio.apply()
+    ```
+2.  **Structure:** All your code must be within an `async def main()` function, called by `asyncio.run(main())`.
+3.  **Selector Best Practices (CRITICAL):**
+    - **Google Search:** You **MUST** use `page.locator('textarea[name=\"q\"]')`. This is the most reliable selector based on dynamic verification.
+    - **Yahoo! JAPAN Search:** You **MUST** use `page.locator('[role=\"search\"] input[type=\"search\"]')`. This has also been dynamically verified as the most stable selector.
+    - **General Principle:** For other sites, prefer role-based locators (`get_by_role`, `get_by_label`) over fragile CSS or XPath selectors.
+4.  **Keep Browser Open:** To allow for verification, your script **must** end with `await asyncio.Future()`. This will keep the browser window open.
+5.  **Correct `await` Usage:** Remember that `await` is only for `async` functions. `page.get_by_role(...)` is NOT async. `await page.get_by_role(...)` is a `TypeError`. The correct pattern is `locator = page.get_by_role(...)` followed by `await locator.fill(...)`.
 
-            async def main():
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=False)
-                    page = await browser.new_page()
-                    await page.goto("https://www.google.com")
-                    # Use a robust locator for the search box
-                    search_box = page.get_by_role("searchbox", name="q")
-                    await search_box.fill("Playwright")
-                    await page.wait_for_timeout(1000) # Wait 1 second
-                    await search_box.press("Enter")
-                    await page.wait_for_load_state('networkidle')
-                    # CRITICAL: Keep the browser open indefinitely.
-                    await asyncio.Future()
+**4. Final Output**
+- You **must** provide only the complete, executable Python code.
+- Ensure all necessary libraries (e.g., `pyperclip`, `pygetwindow`, `subprocess`) are imported.
 
-            asyncio.run(main())
-            ```
-
-2.  **Desktop/Application Operation (Non-Browser):**
-    -   If the prompt refers to a desktop application like "Notepad", "Calculator", or general GUI interactions, you **MUST** use `pyautogui`, `pygetwindow`, and `ocr_helper`.
-    -   **PyAutoGUI Workflow:**
-        -   **CRITICAL FIRST STEP: Window Activation**
-            1.  You **MUST** first identify the target application from the user's prompt (e.g., 'Notepad', 'Calculator').
-            2.  You **MUST** use `pygetwindow.getWindowsWithTitle('AppName')` to get a list of matching windows.
-            3.  If the list is not empty, you **MUST** activate the first window using `window[0].activate()`. This ensures you are targeting the correct, existing window. **DO NOT** launch a new instance if the window already exists.
-            4.  **ONLY IF** no window is found should you launch the application using `subprocess.Popen()`.
-            5.  After launching, you **MUST** use `time.sleep()` to wait for the application to open before attempting to find and activate it.
-        -   **Subsequent Actions:**
-            -   After the window is activated, use `ocr_helper.find_text_coordinates()` to find buttons or text fields.
-            -   Use `pyautogui` to click and type.
-
-**CRITICAL RULE FOR TYPING TEXT (for both tools):**
--   You MUST extract the literal text from the user's command and embed it directly in the function call.
--   **PyAutoGUI (non-ASCII):** `pyperclip.copy("こんにちは")` then `pyautogui.hotkey('ctrl', 'v')`.
--   **Playwright:** `page.get_by_role(...).fill("こんにちは")`. Playwright handles non-ASCII text automatically.
--   **DO NOT** use intermediate variables like `text_to_type`.
-
-**STRICT OUTPUT RULES:**
--   Provide ONLY the Python code block. No explanations or comments.
--   Import all necessary libraries at the top of the script.
--   Screen Resolution: `{width}x{height}`.
+Screen Resolution: `{width}x{height}`.
 """
 
         full_prompt = ""
         if rag_examples:
-            full_prompt += "Here are some examples of successful past operations. Use them to learn the format.\n\n"
+            full_prompt += "Here are some examples of successful past operations. Use them as a reference for the correct format and style.\n\n"
             for example in rag_examples:
                 full_prompt += f"User Command: {example['prompt']}\nCode:\n```python\n{example['code']}\n```\n\n"
 
-        full_prompt += f"Now, complete the following task.\nUser Command: {user_prompt}\nCode:\n"
+        full_prompt += f"Now, write a Python script that achieves the following goal.\nUser Command: {user_prompt}\nCode:\n"
 
         try:
             print(f"Generating code with model '{self.operation_model}' for prompt: {user_prompt}")
@@ -140,17 +105,20 @@ First, analyze the user's prompt to determine the type of operation.
         """
         print("Evaluating operation with LLM...")
         system_prompt = """
-You are a meticulous quality assurance expert. Your task is to determine if a desktop operation was successful.
-You will be given:
-1. The user's original command.
-2. The Python code that was executed.
-3. A "before" screenshot taken before the code was executed.
-4. An "after" screenshot taken after the code was executed.
+You are a meticulous quality assurance expert. Your task is to determine if a desktop automation operation was successful by comparing "before" and "after" screenshots.
 
-Your job is to analyze all of this information to decide if the operation was a success. The executed code is the most important piece of evidence. The "after" screenshot should reflect the result of running that code.
-For example, if the code was `pyautogui.click(x=100, y=200)`, the "after" screenshot should show a click or its effect at those coordinates.
+Follow this **Chain of Thought** to make your determination:
 
-Respond with only the word "SUCCESS" or "FAILURE". Do not provide any explanation.
+1.  **Analyze the User's Goal:** First, understand the user's original command. What was the core intent? (e.g., "type 'hello world'", "open the file menu", "search for 'cats'").
+
+2.  **Identify the Expected Outcome:** Based on the user's goal and the executed code, what is the single most important visual change you expect to see in the "after" screenshot?
+    *   *Example for typing:* "The text 'hello world' should appear in a text field."
+    *   *Example for clicking:* "A new menu, window, or button state should appear where the click occurred."
+    *   *Example for searching:* "The page should show search results related to 'cats'."
+
+3.  **Compare Screenshots for Evidence:** Look for the expected outcome in the "after" screenshot. Is there clear, unambiguous visual evidence that the goal was achieved? The "before" screenshot is for context.
+
+4.  **Final Judgment:** Based on your analysis, conclude with **only** the word "SUCCESS" or "FAILURE". Do not provide any other text or explanation. If the visual evidence is missing or ambiguous, you must conclude "FAILURE".
 """
 
         prompt = f"User Command: {user_prompt}\nExecuted Code:\n```python\n{executed_code}\n```"
