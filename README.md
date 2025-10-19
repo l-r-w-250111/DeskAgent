@@ -118,7 +118,7 @@ pyautogui.press('enter')"
 In Japanese  
 Example 1:  
 ```bash
-ブラウザを開いて、www.yahoo.co.jpに移動して、"猫"を検索"
+ブラウザを開いて、www.yahoo.co.jpに移動して、"猫"を検索
 ```
 Example 2:  
 ```bash
