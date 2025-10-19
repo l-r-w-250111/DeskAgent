@@ -98,6 +98,36 @@ The `rag_examples.json` file provides a template for how to structure the data. 
 python build_rag_from_json.py rag_examples.json
 ```
 
+## Examples of confirmed operations
+* Execution Environment: Windows  
+
+In English  
+Example 1: 
+```bash
+Open the browser, navigate to www.yahoo.co.jp, and search for 'cat'.  
+```
+Example 2: 
+```bash
+Launch the calculator and compute 123+456.
+Use the following input method:  
+pyperclip.copy('123+456')   
+pyautogui.hotkey('ctrl', 'v')  
+pyautogui.press('enter')"  
+```
+
+In Japanese  
+Example 1:  
+```bash
+ブラウザを開いて、www.yahoo.co.jpに移動して、"猫"を検索"
+```
+Example 2:  
+```bash
+電卓を起動して123+456を計算
+次の入力方法を試して
+pyperclip.copy('123+456')
+pyautogui.hotkey('ctrl', 'v')
+pyautogui.press('enter')"
+```
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
