@@ -78,8 +78,8 @@ The application's settings can be configured in two ways:
     ```json
     {
         "ollama_url": "http://localhost:11434",
-        "operation_model": "gemma3:12b",
-        "evaluation_model": "gemma3:12b",
+        "operation_model": "gpt-oss:20b",
+        "evaluation_model": "gpt-oss:20b",
         "embedding_model": "embeddinggemma",
         "max_retries": 3
     }
