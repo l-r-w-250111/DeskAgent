@@ -5,6 +5,15 @@
   },
   {
     "original_prompt": "ブラウザを開いて\"犬\"を検索",
-    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=False)\n        page = await browser.new_page()\n        await page.goto(\"https://www.google.com\")\n        # Best practice: Use the dynamically verified, most reliable selector for Google.\n        search_box = page.locator('textarea[name=\"q\"]')\n        await search_box.fill(\"犬\")\n        await search_box.press(\"Enter\")\n        await page.wait_for_load_state('networkidle')\n        # Best practice: Keep the browser open for verification.\n        await asyncio.Future()\n\nasyncio.run(main())\n"
+    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=False)\n        page = await browser.new_page()\n        await page.goto(\"https://www.google.com\")\n        # Best practice: Use the dynamically verified, most reliable selector for Google.\n        search_box = page.locator('textarea[name=\"q\"]')\n        await search_box.fill(\"犬\")\n        await search_box.press(\"Enter\")\n        await page.wait_for_load_state('networkidle')\n        # Best practice: Keep the browser open for verification.\n        await asyncio.Future()\n\nasyncio.run(main())\n"
+  },
+  {
+    "original_prompt": "電卓を起動して123+456を計算",
+    "code": "import subprocess\nimport time\nimport pygetwindow as gw\nimport pyperclip\nimport pyautogui\n\n# Best Practice: Always check for an existing window first.\ncalc_windows = gw.getWindowsWithTitle('Calculator')\n\nif calc_windows:\n    window = calc_windows[0]\n    window.activate()\n    time.sleep(1)\nelse:\n    subprocess.Popen(['calc.exe'])\n    time.sleep(2)\n    window = gw.getWindowsWithTitle('Calculator')[0]\n    window.activate()\n    time.sleep(1)\n\n# Best Practice: Use clipboard for complex input like calculations.\npyperclip.copy('123+456')\npyautogui.hotkey('ctrl', 'v')\npyautogui.press('enter')\n"
+  },
+  {
+    "original_prompt": "既存のブラウザに接続して、yahoo.co.jpにアクセスしてください",
+    "abstract_prompt": "Connect to an existing browser and navigate to a URL",
+    "code": "import asyncio\nimport nest_asyncio\nfrom playwright.async_api import async_playwright\n\nnest_asyncio.apply()\n\nasync def main():\n    async with async_playwright() as p:\n        # Best Practice: Connect to an existing browser instance using the provided CDP URL.\n        browser = await p.chromium.connect_over_cdp(\"http://localhost:9222\")\n        context = browser.contexts[0]\n        page = context.pages[0]\n        \n        await page.goto(\"https://www.yahoo.co.jp\")\n        \n        # Best practice: Keep the browser open for verification.\n        await asyncio.Future()\n\nasyncio.run(main())\n"
   }
 ]
