@@ -47,7 +47,7 @@ Before you begin, ensure you have the following installed:
 3.  **Pull the required Ollama models:**
     This application uses several models by default. You can pull them using the following commands:
     ```bash
-    ollama pull gemma3:12b  # For operation and evaluation
+    ollama pull gpt-oss:20b  # For operation and evaluation
     ollama pull embeddinggemma   # For RAG embeddings
     ```
 
