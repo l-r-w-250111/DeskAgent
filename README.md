@@ -88,6 +88,28 @@ The application's settings can be configured in two ways:
 2.  **Settings UI:**
     Alternatively, you can navigate to the "Settings" page in the Streamlit application to change and save these values through the UI.
 
+Here's the English translation of the instructions:
+
+## To Operate on an Already Open Browser
+
+If you want to operate on a browser that is already open:
+
+1.  **Close all browser windows**: Completely close and exit all windows of the browser you intend to operate on (e.g., Chrome).
+
+2.  **Launch the browser from the command prompt or terminal using the following command**:
+
+    **For Google Chrome:**
+
+    ```
+    "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\ChromeTemp"
+    ```
+
+    **For Microsoft Edge:**
+
+    ```
+    "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --remote-debugging-port=9222 --user-data-dir="C:\EdgeTemp"
+    ```
+
 ## Populating the Knowledge Base
 
 You can pre-populate the RAG knowledge base with your own examples from a JSON file. This is useful for providing the system with a set of known successful operations before it starts learning from user interactions.
@@ -98,36 +120,6 @@ The `rag_examples.json` file provides a template for how to structure the data. 
 python build_rag_from_json.py rag_examples.json
 ```
 
-## Examples of confirmed operations
-* Execution Environment: Windows  
-
-In English  
-Example 1: 
-```bash
-Open the browser, navigate to www.yahoo.co.jp, and search for 'cat'.  
-```
-Example 2: 
-```bash
-Launch the calculator and compute 123+456.
-Use the following input method:  
-pyperclip.copy('123+456')   
-pyautogui.hotkey('ctrl', 'v')  
-pyautogui.press('enter')"  
-```
-
-In Japanese  
-Example 1:  
-```bash
-ブラウザを開いて、www.yahoo.co.jpに移動して、"猫"を検索
-```
-Example 2:  
-```bash
-電卓を起動して123+456を計算
-次の入力方法を試して
-pyperclip.copy('123+456')
-pyautogui.hotkey('ctrl', 'v')
-pyautogui.press('enter')"
-```
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

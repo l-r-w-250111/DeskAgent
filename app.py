@@ -8,11 +8,28 @@ import logging
 
 # Import the handlers
 from llm_handler import LLMHandler
-from desktop_controller import DesktopController
+# from desktop_controller import DesktopController # Moved to run_automation_flow to avoid GUI issues on startup
 from rag_handler import RAGHandler
-from ocr_helper import get_all_ocr_results, draw_ocr_results
+# from ocr_helper import get_all_ocr_results, draw_ocr_results # Moved to run_automation_flow
 
 import subprocess
+
+# --- Handler Initialization ---
+@st.cache_resource
+def get_llm_handler():
+    """Initializes and returns a cached LLMHandler instance."""
+    return LLMHandler()
+
+@st.cache_resource
+def get_rag_handler():
+    """Initializes and returns a cached RAGHandler instance."""
+    return RAGHandler()
+
+@st.cache_resource
+def get_desktop_controller():
+    """Initializes and returns a cached DesktopController instance."""
+    return DesktopController()
+
 
 # --- Playwright Setup ---
 @st.cache_resource
@@ -80,18 +97,21 @@ def cleanup_temp_files(files: list):
             append_log(f"Error deleting {file_path}: {e}")
 
 # --- Main Application Logic ---
-def run_automation_flow(command: str):
+def run_automation_flow(command: str, cdp_url: str = ""):
     """Orchestrates the entire automation process from command to execution."""
     append_log(f"Received command: '{command}'")
+    if cdp_url:
+        append_log(f"Using browser CDP endpoint: {cdp_url}")
     st.session_state.screenshots_to_cleanup = []
 
     try:
         # 1. Initialization
+        from desktop_controller import DesktopController # Import here to avoid GUI issues on startup
         append_log("Initializing handlers...")
         config = load_config()
         controller = DesktopController()
-        llm_handler = LLMHandler()
-        rag_handler = RAGHandler()
+        llm_handler = get_llm_handler()
+        rag_handler = get_rag_handler()
         max_retries = config.get('max_retries', 3)
         operation_successful = False
         final_code = ""
@@ -106,6 +126,7 @@ def run_automation_flow(command: str):
             append_log(f"--- Attempt {attempt + 1} of {max_retries} ---")
 
             # 3. Capture "Before" State
+            from ocr_helper import get_all_ocr_results, draw_ocr_results # Import here
             append_log("Capturing 'before' screen and performing OCR...")
             before_screenshot_img, ocr_results = get_all_ocr_results()
             before_screenshot_path = controller.save_screenshot(before_screenshot_img, "before")
@@ -129,7 +150,13 @@ def run_automation_flow(command: str):
             # 5. Generate Code
             screen_size = controller.get_screen_size()
             append_log(f"Generating automation code (Screen: {screen_size[0]}x{screen_size[1]})...")
-            generated_code = llm_handler.generate_automation_code(command, screen_size, before_screenshot_path, rag_examples)
+            generated_code = llm_handler.generate_automation_code(
+                command,
+                screen_size,
+                before_screenshot_path,
+                rag_examples,
+                cdp_url=cdp_url
+            )
 
             if not generated_code:
                 append_log("[ERROR] LLM failed to generate code. Retrying...")
@@ -191,21 +218,21 @@ def run_automation_flow(command: str):
                            node.args and isinstance(node.args[0], ast.Str):
                             text_to_find = node.args[0].s
                             break
-                    
+
                     if not text_to_find:
                         raise ValueError("Could not find pyperclip.copy('...') in the generated code.")
 
                     append_log(f"Searching for text '{text_to_find}' in the 'after' screenshot...")
-                    
+
                     # Get OCR results from the 'after' screenshot
                     _, after_ocr_results = get_all_ocr_results(after_screenshot_path)
-                    
+
                     found_text = False
                     for _, text, _ in after_ocr_results:
                         if text_to_find in text:
                             found_text = True
                             break
-                    
+
                     if found_text:
                         append_log(f"[SUCCESS] OCR validation: Found '{text_to_find}'.")
                         operation_successful = True
@@ -267,7 +294,9 @@ def main_page():
             st.session_state.logs = ""
             st.session_state.validation_pending = None
             with st.spinner("Automation in progress... Please wait."):
-                run_automation_flow(user_command)
+                config = load_config()
+                cdp_url = config.get("cdp_url", "")
+                run_automation_flow(user_command, cdp_url=cdp_url.strip())
         else:
             st.warning("Please enter a command.")
 
@@ -317,6 +346,12 @@ def settings_page():
         evaluation_model = st.text_input("Evaluation Model", value=config.get('evaluation_model'))
         embedding_model = st.text_input("Embedding Model", value=config.get('embedding_model'))
         max_retries = st.number_input("Max Retries", min_value=1, max_value=10, value=config.get('max_retries', 3))
+        cdp_url = st.text_input(
+            "Browser CDP Endpoint URL (Optional)",
+            value=config.get('cdp_url', ''),
+            placeholder="http://localhost:9222",
+            help="To automate an existing browser, start it with a debugging port (e.g., `chrome.exe --remote-debugging-port=9222`) and enter the CDP URL here."
+        )
 
         submitted = st.form_submit_button("Save Settings")
         if submitted:
@@ -325,7 +360,8 @@ def settings_page():
                 "operation_model": operation_model,
                 "evaluation_model": evaluation_model,
                 "embedding_model": embedding_model,
-                "max_retries": max_retries
+                "max_retries": max_retries,
+                "cdp_url": cdp_url
             }
             save_config(new_config)
             st.success("Settings saved successfully!")
