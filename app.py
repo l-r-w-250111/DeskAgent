@@ -7,7 +7,7 @@ import numpy as np
 import logging
 
 # Import the handlers
-from llm_handler import LLMHandler
+from llm_singleton import get_llm_handler
 # from desktop_controller import DesktopController # Moved to run_automation_flow to avoid GUI issues on startup
 from rag_handler import RAGHandler
 # from ocr_helper import get_all_ocr_results, draw_ocr_results # Moved to run_automation_flow
@@ -15,11 +15,6 @@ from rag_handler import RAGHandler
 import subprocess
 
 # --- Handler Initialization ---
-@st.cache_resource
-def get_llm_handler():
-    """Initializes and returns a cached LLMHandler instance."""
-    return LLMHandler()
-
 @st.cache_resource
 def get_rag_handler():
     """Initializes and returns a cached RAGHandler instance."""
