@@ -151,7 +151,7 @@ Respond with only the abstract command.
                 system=system_prompt,
                 prompt=full_prompt,
                 images=[screenshot_path],
-                options={'keep_alive': -1}
+                options={'keep_alive': "5m"}
             )
 
             generated_code = response['response'].strip()
@@ -179,7 +179,7 @@ Respond with only the abstract command.
                 system=self.evaluation_system_prompt,
                 prompt=prompt,
                 images=[before_screenshot_path, after_screenshot_path],
-                options={'keep_alive': -1}
+                options={'keep_alive': "5m"}
             )
 
             result = response['response'].strip().upper()
@@ -199,11 +199,12 @@ Respond with only the abstract command.
                 model=self.operation_model,
                 system=self.abstract_system_prompt,
                 prompt=user_prompt,
-                options={'keep_alive': -1}
+                options={'keep_alive': "5m"}
             )
             abstracted_prompt = response['response'].strip()
             print(f"Abstracted Prompt: {abstracted_prompt}")
             return abstracted_prompt
         except Exception as e:
             print(f"Error abstracting prompt: {e}. Falling back to original prompt.")
+
             return user_prompt
