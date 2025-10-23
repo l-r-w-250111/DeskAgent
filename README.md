@@ -81,14 +81,64 @@ The application's settings can be configured in two ways:
         "operation_model": "gpt-oss:20b",
         "evaluation_model": "gpt-oss:20b",
         "embedding_model": "embeddinggemma",
-        "max_retries": 3
+        "max_retries": 3,
+        "cdp_url": "http://localhost:9222"
     }
     ```
+    -   `cdp_url`: To automate a browser that is already open, you need to provide its Chrome DevTools Protocol (CDP) endpoint. Launch your browser with remote debugging enabled (see the "To Operate on an Already Open Browser" section below), and then set this URL in the configuration.
 
 2.  **Settings UI:**
     Alternatively, you can navigate to the "Settings" page in the Streamlit application to change and save these values through the UI.
 
-Here's the English translation of the instructions:
+## Advanced Configuration: CPU/GPU Split for Performance
+
+To significantly reduce model load times and conserve GPU memory, you can run the embedding model on a separate, CPU-only Ollama instance while the main LLMs run on a GPU-enabled instance.
+
+### How It Works
+
+-   **Main LLMs (GPU):** The `operation_model` and `evaluation_model` will run on the primary Ollama server, specified by `ollama_url`. This should be your standard, GPU-accelerated Ollama instance.
+-   **Embedding Model (CPU):** The `embedding_model` will run on a secondary Ollama server, specified by `embedding_ollama_url`. This instance can be configured to run exclusively on the CPU, freeing up GPU resources.
+
+### Setup Instructions
+
+1.  **Launch the CPU-only Ollama Instance:**
+    Open a new terminal and run Ollama with the `OLLAMA_NO_GPU` environment variable. It's crucial to specify a different port (e.g., `11435`) to avoid conflicts with your main instance.
+
+    **For Linux / macOS (Bash, Zsh, etc.):**
+    ```bash
+    OLLAMA_NO_GPU=true OLLAMA_HOST=127.0.0.1:11435 ollama serve
+    ```
+
+    **For Windows PowerShell:**
+    ```powershell
+    $env:OLLAMA_NO_GPU="true"; $env:OLLAMA_HOST="127.0.0.1:11435"; ollama serve
+    ```
+
+    **For Windows Command Prompt (CMD):**
+    ```dos
+    set OLLAMA_NO_GPU=true && set OLLAMA_HOST=127.0.0.1:11435 && ollama serve
+    ```
+
+2.  **Configure the Application:**
+    You need to tell the application where to find this new CPU server. You can do this in two ways:
+    -   **Via `config.json`:**
+        Add the `embedding_ollama_url` key to your `config.json` file.
+
+        ```json
+        {
+            "ollama_url": "http://localhost:11434",
+            "embedding_ollama_url": "http://localhost:11435",
+            "operation_model": "gpt-oss:20b",
+            "evaluation_model": "gpt-oss:20b",
+            "embedding_model": "embeddinggemma",
+            "max_retries": 3
+        }
+        ```
+
+    -   **Via the Settings UI:**
+        Navigate to the "Settings" page in the application and fill in the "Ollama URL (for embedding model)" field with the address of your CPU-only server (e.g., `http://localhost:11435`).
+
+By setting this up, the application will keep both the main LLMs and the embedding model persistent in memory on their respective servers, eliminating model reload times and optimizing resource usage.
 
 ## To Operate on an Already Open Browser
 
