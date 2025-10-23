@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  ollama-llm:
+    image: ollama/ollama
+    container_name: ollama-llm
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama/models
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  ollama-embed:
+    image: ollama/ollama
+    container_name: ollama-embed
+    restart: always
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_models:/root/.ollama/models
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    # By not specifying a GPU, it operates using the CPU.
+
+volumes:
+  ollama_models:
