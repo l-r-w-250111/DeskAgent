@@ -119,7 +119,10 @@ To significantly reduce model load times and conserve GPU memory, you can run th
     set OLLAMA_NO_GPU=true && set OLLAMA_HOST=127.0.0.1:11435 && ollama serve
     ```
 
-2.  **Configure the Application:**
+    **For Docker:**  
+    Launch using `docker-compose.yml` as a reference.  
+
+3.  **Configure the Application:**
     You need to tell the application where to find this new CPU server. You can do this in two ways:
     -   **Via `config.json`:**
         Add the `embedding_ollama_url` key to your `config.json` file.
