@@ -1,5 +1,6 @@
 import os
 import json
+import ollama
 from llama_index.core import (
     Document,
     VectorStoreIndex,
@@ -24,9 +25,21 @@ class RAGHandler:
         with open(config_path, 'r') as f:
             config = json.load(f)
 
+        embedding_ollama_url = config.get('embedding_ollama_url', config['ollama_url'])
+
+        # Pre-load and persist the embedding model
+        try:
+            print(f"Pre-loading embedding model from {embedding_ollama_url}...")
+            client = ollama.Client(host=embedding_ollama_url)
+            client.generate(model=config['embedding_model'], prompt=" ", options={'keep_alive': -1})
+            print("Embedding model pre-loaded successfully.")
+        except Exception as e:
+            print(f"Could not pre-load embedding model: {e}")
+
+
         self.embed_model = OllamaEmbedding(
             model_name=config['embedding_model'],
-            base_url=config['ollama_url'],
+            base_url=embedding_ollama_url,
         )
 
         try:

@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import ollama
 from rag_handler import RAGHandler
 from llm_handler import LLMHandler
 
@@ -13,6 +14,20 @@ def build_rag_from_json(json_file):
     """
     print("Initializing handlers to build RAG database...")
     try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+
+        embedding_ollama_url = config.get('embedding_ollama_url', config['ollama_url'])
+        
+        # Pre-load and persist the embedding model
+        try:
+            print(f"Pre-loading embedding model from {embedding_ollama_url}...")
+            client = ollama.Client(host=embedding_ollama_url)
+            client.generate(model=config['embedding_model'], prompt=" ", options={'keep_alive': -1})
+            print("Embedding model pre-loaded successfully.")
+        except Exception as e:
+            print(f"Could not pre-load embedding model: {e}")
+
         # We only need the LLM handler for the abstraction part,
         # and the RAG handler for the storage part.
         llm_handler = LLMHandler()

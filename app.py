@@ -8,7 +8,6 @@ import logging
 
 # Import the handlers
 from llm_singleton import get_llm_handler
-# from desktop_controller import DesktopController # Moved to run_automation_flow to avoid GUI issues on startup
 from rag_handler import RAGHandler
 # from ocr_helper import get_all_ocr_results, draw_ocr_results # Moved to run_automation_flow
 
@@ -16,13 +15,9 @@ import subprocess
 
 # --- Handler Initialization ---
 @st.cache_resource
-def get_rag_handler():
-    """Initializes and returns a cached RAGHandler instance."""
-    return RAGHandler()
-
-@st.cache_resource
 def get_desktop_controller():
     """Initializes and returns a cached DesktopController instance."""
+    from desktop_controller import DesktopController
     return DesktopController()
 
 
@@ -101,12 +96,11 @@ def run_automation_flow(command: str, cdp_url: str = ""):
 
     try:
         # 1. Initialization
-        from desktop_controller import DesktopController # Import here to avoid GUI issues on startup
         append_log("Initializing handlers...")
         config = load_config()
-        controller = DesktopController()
+        controller = get_desktop_controller()
         llm_handler = get_llm_handler()
-        rag_handler = get_rag_handler()
+        rag_handler = RAGHandler()
         max_retries = config.get('max_retries', 3)
         operation_successful = False
         final_code = ""
@@ -201,10 +195,11 @@ def run_automation_flow(command: str, cdp_url: str = ""):
                 try:
                     import ast
 
-                    # Safely parse the code to find the text in pyperclip.copy()
+                    # Safely parse the code to find the text to be typed
                     text_to_find = None
                     tree = ast.parse(final_code)
                     for node in ast.walk(tree):
+                        # Check for pyperclip.copy('...')
                         if isinstance(node, ast.Call) and \
                            isinstance(node.func, ast.Attribute) and \
                            node.func.attr == 'copy' and \
@@ -213,9 +208,18 @@ def run_automation_flow(command: str, cdp_url: str = ""):
                            node.args and isinstance(node.args[0], ast.Str):
                             text_to_find = node.args[0].s
                             break
+                        # Check for pyautogui.typewrite('...')
+                        if isinstance(node, ast.Call) and \
+                           isinstance(node.func, ast.Attribute) and \
+                           node.func.attr == 'typewrite' and \
+                           isinstance(node.func.value, ast.Name) and \
+                           node.func.value.id == 'pyautogui' and \
+                           node.args and isinstance(node.args[0], ast.Str):
+                            text_to_find = node.args[0].s
+                            break
 
                     if not text_to_find:
-                        raise ValueError("Could not find pyperclip.copy('...') in the generated code.")
+                        raise ValueError("Could not find text being typed in the generated code.")
 
                     append_log(f"Searching for text '{text_to_find}' in the 'after' screenshot...")
 
@@ -336,7 +340,8 @@ def settings_page():
     config = load_config()
 
     with st.form("settings_form"):
-        ollama_url = st.text_input("Ollama URL", value=config.get('ollama_url'))
+        ollama_url = st.text_input("Ollama URL (for main LLMs)", value=config.get('ollama_url'))
+        embedding_ollama_url = st.text_input("Ollama URL (for embedding model)", value=config.get('embedding_ollama_url'))
         operation_model = st.text_input("Operation Model", value=config.get('operation_model'))
         evaluation_model = st.text_input("Evaluation Model", value=config.get('evaluation_model'))
         embedding_model = st.text_input("Embedding Model", value=config.get('embedding_model'))
@@ -352,6 +357,7 @@ def settings_page():
         if submitted:
             new_config = {
                 "ollama_url": ollama_url,
+                "embedding_ollama_url": embedding_ollama_url,
                 "operation_model": operation_model,
                 "evaluation_model": evaluation_model,
                 "embedding_model": embedding_model,

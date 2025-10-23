@@ -1,5 +1,6 @@
 {
     "ollama_url": "http://localhost:11434",
+    "embedding_ollama_url": "http://localhost:11435",
     "operation_model": "gpt-oss:20b",
     "evaluation_model": "gpt-oss:20b",
     "embedding_model": "embeddinggemma",
